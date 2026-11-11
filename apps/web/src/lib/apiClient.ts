@@ -57,7 +57,11 @@ export async function apiClient<T>(
   options: RequestInit = {},
   retries = 1
 ): Promise<ApiResponse<T>> {
-  const url = endpoint.startsWith('http') ? endpoint : `/api${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : endpoint.startsWith('/api')
+      ? endpoint
+      : `/api${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
@@ -129,4 +133,29 @@ export async function apiClient<T>(
     );
   }
 }
+
+apiClient.get = function <T>(endpoint: string, options?: RequestInit) {
+  return apiClient<T>(endpoint, { ...options, method: 'GET' });
+};
+
+apiClient.post = function <T>(endpoint: string, body?: unknown, options?: RequestInit) {
+  return apiClient<T>(endpoint, {
+    ...options,
+    method: 'POST',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+};
+
+apiClient.patch = function <T>(endpoint: string, body?: unknown, options?: RequestInit) {
+  return apiClient<T>(endpoint, {
+    ...options,
+    method: 'PATCH',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+};
+
+apiClient.delete = function <T>(endpoint: string, options?: RequestInit) {
+  return apiClient<T>(endpoint, { ...options, method: 'DELETE' });
+};
+
 
