@@ -1,0 +1,16 @@
+import { NextRequest } from 'next/server';
+import { withApiHandler } from '@/server/lib/apiHandler';
+import { createSuccessResponse } from '@/server/lib/response';
+import { AuthService } from '@/server/services/authService';
+import { registerSchema } from '@/server/validators/authValidators';
+
+export const POST = withApiHandler(async (req: NextRequest, { correlationId }) => {
+  const body = await req.json();
+  const parsed = registerSchema.parse(body);
+
+  const result = await AuthService.register(parsed, correlationId);
+  const status = result.emailSent ? 201 : 202;
+
+  return createSuccessResponse(result.user, result.message, status);
+});
+
