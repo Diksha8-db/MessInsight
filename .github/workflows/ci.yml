@@ -1,0 +1,106 @@
+name: MessInsight CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  web-ci:
+    name: Web App CI (Lint, Typecheck, Test, Build)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prettier check
+        run: npm run format:check
+
+      - name: Lint web app
+        run: npm run lint
+
+      - name: TypeScript typecheck
+        run: npm run typecheck
+
+      - name: Run Vitest unit & API tests
+        run: npm run test
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://localhost:27017/messinsight_test
+          JWT_SECRET: supersecretjwtkeymustbe32charactersormore!
+          INSTITUTE_EMAIL_DOMAIN: college.edu
+          ML_SERVICE_URL: http://localhost:8000
+          ML_SERVICE_SECRET: mlservicesecretkey16chars
+
+      - name: Build web app
+        run: npm run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          MONGODB_URI: mongodb://localhost:27017/messinsight_dummy
+          JWT_SECRET: supersecretjwtkeymustbe32charactersormore!
+          INSTITUTE_EMAIL_DOMAIN: college.edu
+          ML_SERVICE_URL: http://localhost:8000
+          ML_SERVICE_SECRET: mlservicesecretkey16chars
+
+      - name: Security audit (npm)
+        run: npm audit --audit-level=critical
+
+  ml-ci:
+    name: ML Service CI (Ruff, Pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install ML dependencies
+        run: |
+          cd services/ml-service
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install ruff pytest pip-audit
+
+      - name: Ruff code check
+        run: |
+          cd services/ml-service
+          ruff check .
+
+      - name: Run Pytest
+        run: |
+          cd services/ml-service
+          pytest
+
+      - name: Security audit (pip-audit)
+        run: |
+          cd services/ml-service
+          pip-audit || true
+
+  secret-scan:
+    name: Secret Leak Scan (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
