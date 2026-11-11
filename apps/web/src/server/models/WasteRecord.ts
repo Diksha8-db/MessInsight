@@ -59,9 +59,9 @@ const WasteRecordSchema = new Schema<IWasteRecord>(
       required: true,
       min: [0, 'Consumed quantity cannot be negative'],
       validate: {
-        validator: function (val: number) {
-          const doc = this as unknown as IWasteRecord;
-          return doc.preparedQuantity === undefined || val <= doc.preparedQuantity;
+        validator: function (this: mongoose.Document, val: number) {
+          const prep = (this as unknown as IWasteRecord).preparedQuantity;
+          return prep === undefined || val <= prep;
         },
         message: 'Consumed quantity cannot exceed prepared quantity',
       },
@@ -71,9 +71,9 @@ const WasteRecordSchema = new Schema<IWasteRecord>(
       required: true,
       min: [0, 'Leftover quantity cannot be negative'],
       validate: {
-        validator: function (val: number) {
-          const doc = this as unknown as IWasteRecord;
-          return doc.preparedQuantity === undefined || val <= doc.preparedQuantity;
+        validator: function (this: mongoose.Document, val: number) {
+          const prep = (this as unknown as IWasteRecord).preparedQuantity;
+          return prep === undefined || val <= prep;
         },
         message: 'Leftover quantity cannot exceed prepared quantity',
       },
@@ -97,7 +97,7 @@ const WasteRecordSchema = new Schema<IWasteRecord>(
   }
 );
 
-WasteRecordSchema.pre('save', function () {
+WasteRecordSchema.pre('save', function (this: mongoose.Document) {
   const doc = this as unknown as IWasteRecord;
   const prep = doc.preparedQuantity || 0;
   const cons = doc.consumedQuantity || 0;
