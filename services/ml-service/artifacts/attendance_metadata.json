@@ -1,0 +1,9 @@
+{
+  "modelVersion": "attendance-v1.0",
+  "trainedOn": "2026-11-11T19:32:00.807453+00:00",
+  "dataSource": "synthetic",
+  "sampleCount": 90,
+  "testMAE": 3.52,
+  "testRMSE": 4.39,
+  "baselineMAE": 42.03
+}

@@ -1,0 +1,7 @@
+{
+  "dataSource": "synthetic",
+  "testSamples": 18,
+  "mae": 3.52,
+  "rmse": 4.39,
+  "baselineMAE": 42.03
+}

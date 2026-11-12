@@ -1,12 +1,18 @@
 from datetime import datetime, timezone
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from api.prediction import router as prediction_router
+from api.quantity import router as quantity_router
+from api.sentiment import router as sentiment_router
+from api.waste_analysis import router as waste_router
+from services.prediction_service import prediction_service
+from services.sentiment_service import sentiment_service
+
 app = FastAPI(
     title="MessInsight ML Service",
-    description="NLP and Demand Prediction microservice for MessInsight",
+    description="NLP Sentiment Analysis and Demand Prediction microservice for MessInsight",
     version="0.1.0",
 )
 
@@ -18,6 +24,11 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+app.include_router(sentiment_router)
+app.include_router(prediction_router)
+app.include_router(quantity_router)
+app.include_router(waste_router)
 
 
 class HealthResponse(BaseModel):
@@ -36,6 +47,5 @@ async def health_check():
         service="messinsight-ml-service",
         timestamp=datetime.now(timezone.utc).isoformat(),
         version="0.1.0",
-        models_loaded=False,  # Loaded in subsequent ML phases
+        models_loaded=sentiment_service.is_loaded and prediction_service.is_loaded,
     )
-
