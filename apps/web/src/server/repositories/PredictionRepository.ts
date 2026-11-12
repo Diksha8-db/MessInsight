@@ -30,5 +30,18 @@ export class PredictionRepository {
       .sort({ serviceDate: 1, mealType: 1, generatedAt: -1 })
       .exec();
   }
+
+  static async listRange(
+    messId: string | mongoose.Types.ObjectId,
+    fromDate: string,
+    toDate: string
+  ): Promise<IPrediction[]> {
+    return PredictionModel.find({
+      messId,
+      serviceDate: { $gte: fromDate, $lte: toDate },
+    })
+      .sort({ serviceDate: 1, mealType: 1, generatedAt: -1 })
+      .exec();
+  }
 }
 
