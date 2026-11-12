@@ -1,0 +1,121 @@
+text,label,source
+"The food was delicious and fresh",POSITIVE,synthetic
+"Rice was good but vegetables were cold",MIXED,synthetic
+"The dal was too salty and inedible",NEGATIVE,synthetic
+"Food was average, nothing special",NEUTRAL,synthetic
+"Amazing taste, especially the paneer butter masala!",POSITIVE,synthetic
+"Chapati was soft and sabzi was tasty 👍",POSITIVE,synthetic
+"Very bad taste, undercooked rice and watery dal",NEGATIVE,synthetic
+"Sambhar was okay, dosa was crispy",POSITIVE,synthetic
+"Khana bahut accha tha, swadisht paneer",POSITIVE,synthetic
+"Dal me namkeen bahut jyada tha",NEGATIVE,synthetic
+"Sabzi ekdum bakwas thi, thanda khana mila",NEGATIVE,synthetic
+"Chawal thik tha par roti kacchi thi",MIXED,synthetic
+"Everything was fresh and piping hot",POSITIVE,synthetic
+"Not good at all, cold food served",NEGATIVE,synthetic
+"Not tasty, no flavor",NEGATIVE,synthetic
+"Not bad, acceptable for dinner",NEUTRAL,synthetic
+"Not too salty, perfectly balanced spice",POSITIVE,synthetic
+"Portion size was too small, less quantity",NEGATIVE,synthetic
+"Found a hair in the dal! Unhygienic and disgusting",NEGATIVE,synthetic
+"Clean dining hall and polite staff",POSITIVE,synthetic
+"Found small pebble or stone in the rice",NEGATIVE,synthetic
+"The chicken curry was rich, spicy and tender",POSITIVE,synthetic
+"The poha was dry and burnt",NEGATIVE,synthetic
+"Tea was cold and watery",NEGATIVE,synthetic
+"Paneer was fresh and gravy was great",POSITIVE,synthetic
+"Gulab jamun was sweet and soft 😋",POSITIVE,synthetic
+"Rice was burnt and smelled bad",NEGATIVE,synthetic
+"Ok",UNCERTAIN,synthetic
+"....",UNCERTAIN,synthetic
+"Fine",UNCERTAIN,synthetic
+"Good lunch",POSITIVE,synthetic
+"Bad dinner",NEGATIVE,synthetic
+"Average lunch today",NEUTRAL,synthetic
+"Biryani was flavorful, raita was fresh",POSITIVE,synthetic
+"Very oily and greasy poori",NEGATIVE,synthetic
+"Kheer was sweet and rich",POSITIVE,synthetic
+"Roti was rubbery and hard to chew",NEGATIVE,synthetic
+"Dal makhani was creamy and delicious",POSITIVE,synthetic
+"Salad was stale and cucumbers were bitter",NEGATIVE,synthetic
+"Food quality has improved a lot",POSITIVE,synthetic
+"Terrible smell coming from the curry",NEGATIVE,synthetic
+"Decent food, meets daily needs",NEUTRAL,synthetic
+"Great breakfast, idli was super soft",POSITIVE,synthetic
+"Upma was salty and cold",NEGATIVE,synthetic
+"Aloo paratha was stuffed well and hot",POSITIVE,synthetic
+"Curd was sour and spoiled",NEGATIVE,synthetic
+"Khana thanda tha aur namak kam tha",NEGATIVE,synthetic
+"Dal achhi thi par rice me kankar tha",MIXED,synthetic
+"Best paneer curry this semester",POSITIVE,synthetic
+"Very spicy, my throat is burning!",NEGATIVE,synthetic
+"Not enough food, ran out of chapati at 8:30pm",NEGATIVE,synthetic
+"Flies sitting on open salad counter, unhygienic",NEGATIVE,synthetic
+"Tasteless soup, felt like warm water",NEGATIVE,synthetic
+"Mixed vegetable was fresh and well cooked",POSITIVE,synthetic
+"Sweet corn soup was comforting and warm",POSITIVE,synthetic
+"Rajma was undercooked and kidney beans were hard",NEGATIVE,synthetic
+"Chole bhature was heavy and greasy",NEGATIVE,synthetic
+"Loved the dessert today ❤️",POSITIVE,synthetic
+"Tandoori roti was crisp and hot",POSITIVE,synthetic
+"Water cooler in mess was dirty and smelly",NEGATIVE,synthetic
+"Dosa was burnt on one side",NEGATIVE,synthetic
+"Chutney was watery and tasteless",NEGATIVE,synthetic
+"Excellent quality and fast service",POSITIVE,synthetic
+"Nothing to complain about, standard meal",NEUTRAL,synthetic
+"Paneer tikka was flavorful and smoky",POSITIVE,synthetic
+"Too oily vegetables, floating in oil",NEGATIVE,synthetic
+"Kadai chicken was super tasty",POSITIVE,synthetic
+"Fish fry was soggy, not crispy",NEGATIVE,synthetic
+"Pulao was aromatic and basmati rice was well separated",POSITIVE,synthetic
+"Cold coffee was sweet and chilled 👌",POSITIVE,synthetic
+"Breakfast was okay, lunch was horrible",MIXED,synthetic
+"Good portion size, satisfied with meal",POSITIVE,synthetic
+"Food was cold when served at 1:30 PM",NEGATIVE,synthetic
+"Superb taste and hygiene",POSITIVE,synthetic
+"Utensils were greasy and not washed properly",NEGATIVE,synthetic
+"Khana bahut swadisht aur garm tha",POSITIVE,synthetic
+"Accha khana, maza aa gaya",POSITIVE,synthetic
+"Bakwas quality, pet kharab ho gaya",NEGATIVE,synthetic
+"Kaccha chawal, bina paka hua",NEGATIVE,synthetic
+"Paneer kam tha, aalu jyada tha",NEGATIVE,synthetic
+"Mithaai bahut achhi thi",POSITIVE,synthetic
+"Very bad",NEGATIVE,synthetic
+"Very good",POSITIVE,synthetic
+"Horrible",NEGATIVE,synthetic
+"Delicious meal",POSITIVE,synthetic
+"Tasteless curry",NEGATIVE,synthetic
+"Fresh salad and fruits",POSITIVE,synthetic
+"Stale bread in breakfast",NEGATIVE,synthetic
+"Perfect spice level",POSITIVE,synthetic
+"Too much chili powder",NEGATIVE,synthetic
+"Satisfactory meal",NEUTRAL,synthetic
+"Reasonable quality today",NEUTRAL,synthetic
+"Ordinary food, could be better",NEUTRAL,synthetic
+"Cold chapati, hot dal",MIXED,synthetic
+"Good sweets but bad curry",MIXED,synthetic
+"Tasty paneer but cold rice",MIXED,synthetic
+"Insect found near serving counter",NEGATIVE,synthetic
+"Staff was rude and food was cold",NEGATIVE,synthetic
+"Clean plates and hot food served with a smile",POSITIVE,synthetic
+"Egg curry was spicy and well prepared",POSITIVE,synthetic
+"Boiled eggs were undercooked and runny",NEGATIVE,synthetic
+"Mushroom masala was exceptional",POSITIVE,synthetic
+"Dal tadka was authentic and garlicky",POSITIVE,synthetic
+"Jeera rice was fragrant",POSITIVE,synthetic
+"Lemon rice was too sour",NEGATIVE,synthetic
+"Vada pav was piping hot and crispy",POSITIVE,synthetic
+"Pav bhaji was flavorful",POSITIVE,synthetic
+"Dhokla was spongy and fresh",POSITIVE,synthetic
+"Samosa was cold and soggy",NEGATIVE,synthetic
+"Lassi was thick and refreshing",POSITIVE,synthetic
+"Buttermilk was diluted and sour",NEGATIVE,synthetic
+"Noodles were sticky and overcooked",NEGATIVE,synthetic
+"Fried rice was tasty and not oily",POSITIVE,synthetic
+"Manchurian balls were hard like stones",NEGATIVE,synthetic
+"Halwa was dripping with ghee and hot",POSITIVE,synthetic
+"Papad was crisp",POSITIVE,synthetic
+"Papad was damp and unchewable",NEGATIVE,synthetic
+"Great dinner, keep it up!",POSITIVE,synthetic
+"Worst meal of the week",NEGATIVE,synthetic
+
