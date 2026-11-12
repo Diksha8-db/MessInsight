@@ -56,6 +56,8 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
   }
 }
 
+export const connectDb = connectToDatabase;
+
 export async function disconnectFromDatabase(): Promise<void> {
   if (cached.conn) {
     await cached.conn.disconnect();

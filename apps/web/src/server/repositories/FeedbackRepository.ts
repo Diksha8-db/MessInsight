@@ -99,5 +99,24 @@ export class FeedbackRepository {
     ).exec();
     return res.modifiedCount > 0;
   }
+
+  static async updateSentiment(
+    id: string | mongoose.Types.ObjectId,
+    sentiment: any,
+    dishesMentioned: string[],
+    issues: any[]
+  ): Promise<IFeedback | null> {
+    return FeedbackModel.findByIdAndUpdate(
+      id,
+      {
+        $set: {
+          sentiment,
+          dishesMentioned,
+          issues,
+        },
+      },
+      { returnDocument: 'after' }
+    ).exec();
+  }
 }
 
