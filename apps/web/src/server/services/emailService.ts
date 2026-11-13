@@ -94,14 +94,18 @@ export class SmtpEmailService implements IEmailService {
 
   private getTransporter(): Transporter {
     if (!this.transporter) {
+      const host = env.EMAIL_SMTP_HOST || 'smtp.gmail.com';
+      const port = env.EMAIL_SMTP_PORT ? Number(env.EMAIL_SMTP_PORT) : 587;
+      const user = env.EMAIL_SMTP_USER;
+      const pass = env.EMAIL_SMTP_PASS;
+
+      logger.info(`[Email Service] Initializing SMTP transport via ${host}:${port} as ${user}`);
+
       this.transporter = nodemailer.createTransport({
-        host: env.EMAIL_SMTP_HOST || 'smtp.gmail.com',
-        port: env.EMAIL_SMTP_PORT || 587,
-        secure: env.EMAIL_SMTP_PORT === 465,
-        auth: {
-          user: env.EMAIL_SMTP_USER,
-          pass: env.EMAIL_SMTP_PASS,
-        },
+        host,
+        port,
+        secure: port === 465,
+        auth: { user, pass },
       });
     }
     return this.transporter;
@@ -111,6 +115,8 @@ export class SmtpEmailService implements IEmailService {
     try {
       const transporter = this.getTransporter();
       const from = env.EMAIL_FROM || env.EMAIL_SMTP_USER || 'no-reply@messinsight.local';
+
+      logger.info(`[Email Service] Sending live verification email to ${toEmail} from ${from}...`);
 
       const info = await transporter.sendMail({
         from: `"MessInsight Portal" <${from}>`,
@@ -146,10 +152,12 @@ export class SmtpEmailService implements IEmailService {
         `,
       });
 
+      console.log(`[Email Service] Live verification email successfully delivered to ${toEmail} (ID: ${info.messageId})`);
       logger.info(`[Email Service] Sent live verification email to ${toEmail} (${info.messageId})`);
       return { success: true, messageId: info.messageId };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Email Service] SMTP Delivery Error to ${toEmail}:`, errorMsg);
       logger.error(`[Email Service] Failed to send email to ${toEmail}`, undefined, undefined, err as Error);
       return { success: false, error: errorMsg };
     }
@@ -194,14 +202,42 @@ export class SmtpEmailService implements IEmailService {
       return { success: true, messageId: info.messageId };
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Email Service] SMTP Delivery Error to ${toEmail}:`, errorMsg);
       logger.error(`[Email Service] Failed to send password reset to ${toEmail}`, undefined, undefined, err as Error);
       return { success: false, error: errorMsg };
     }
   }
 }
 
-// Dynamically use SMTP service if EMAIL_PROVIDER=smtp and user credentials are provided
-export const emailService: IEmailService =
-  env.EMAIL_PROVIDER === 'smtp' && env.EMAIL_SMTP_USER && env.EMAIL_SMTP_PASS
-    ? new SmtpEmailService()
-    : new ConsoleEmailService();
+/**
+ * Delegating email service that dynamically selects SMTP when credentials
+ * exist in the environment, or falls back to console sink in development/test.
+ */
+class DelegatingEmailService implements IEmailService {
+  private consoleService = new ConsoleEmailService();
+  private smtpService = new SmtpEmailService();
+
+  setSimulateFailure(value: boolean) {
+    this.consoleService.setSimulateFailure(value);
+  }
+
+  private getActiveService(): IEmailService {
+    const hasSmtpCredentials = Boolean(env.EMAIL_SMTP_USER && env.EMAIL_SMTP_PASS);
+    const isSmtpProvider = env.EMAIL_PROVIDER === 'smtp' || hasSmtpCredentials;
+
+    if (isSmtpProvider && hasSmtpCredentials) {
+      return this.smtpService;
+    }
+    return this.consoleService;
+  }
+
+  async sendOtpEmail(toEmail: string, otp: string): Promise<EmailDispatchResult> {
+    return this.getActiveService().sendOtpEmail(toEmail, otp);
+  }
+
+  async sendPasswordResetEmail(toEmail: string, resetUrl: string): Promise<EmailDispatchResult> {
+    return this.getActiveService().sendPasswordResetEmail(toEmail, resetUrl);
+  }
+}
+
+export const emailService: IEmailService = new DelegatingEmailService();
