@@ -14,7 +14,7 @@ export const envSchema = z.object({
   COOKIE_NAME: z.string().default('messinsight_session'),
 
   // Institute Configuration
-  INSTITUTE_EMAIL_DOMAIN: z.string().min(1, 'INSTITUTE_EMAIL_DOMAIN is required (e.g., college.edu)'),
+  INSTITUTE_EMAIL_DOMAIN: z.string().optional().default(''),
   MESS_TIMEZONE: z.string().default('Asia/Kolkata'),
 
   // ML Service Integration

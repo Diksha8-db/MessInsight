@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { env } from '../config/env';
 
 export const passwordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-#])[A-Za-z\d@$!%*?&_\-#]{8,}$/;
@@ -10,16 +9,7 @@ export const registerSchema = z.object({
     .string()
     .trim()
     .toLowerCase()
-    .email('Invalid email address')
-    .refine(
-      (email) => {
-        const allowedDomain = env.INSTITUTE_EMAIL_DOMAIN.toLowerCase().trim();
-        return email.endsWith(`@${allowedDomain}`) || email.endsWith(`.${allowedDomain}`);
-      },
-      {
-        message: `Only institute email addresses ending with @${env.INSTITUTE_EMAIL_DOMAIN} are allowed`,
-      }
-    ),
+    .email('Invalid email address'),
   password: z
     .string()
     .min(8, 'Password must be at least 8 characters long')

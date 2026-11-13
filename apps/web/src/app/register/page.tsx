@@ -48,7 +48,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md space-y-6 rounded-xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
         <div className="text-center space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">Create an Account</h1>
-          <p className="text-sm text-zinc-500">Register with your official university institute email</p>
+          <p className="text-sm text-zinc-500">Register to access the mess portal</p>
         </div>
 
         {errorMessage && (
@@ -76,13 +76,13 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-sm font-medium mb-1" htmlFor="email">
-              Institute Email Address
+              Email Address
             </label>
             <input
               id="email"
               type="email"
               required
-              placeholder="student@college.edu"
+              placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading}
