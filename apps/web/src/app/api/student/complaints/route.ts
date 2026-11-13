@@ -8,6 +8,22 @@ import { createComplaintSchema } from '@/server/validators/complaintValidators';
 export const POST = withApiHandler(async (req: NextRequest, { correlationId }) => {
   const session = await requireStudent(req);
   const body = await req.json();
+
+  if (!body.messId) {
+    if (session.messId) {
+      body.messId = session.messId;
+    } else {
+      const { MenuModel } = await import('@/server/models/Menu');
+      const latestMenu = await MenuModel.findOne({}).exec();
+      if (latestMenu?.messId) {
+        body.messId = latestMenu.messId.toString();
+      } else {
+        const { default: mongoose } = await import('mongoose');
+        body.messId = new mongoose.Types.ObjectId().toString();
+      }
+    }
+  }
+
   const input = createComplaintSchema.parse(body);
 
   const complaint = await ComplaintService.createComplaint(session.sub, input, correlationId);

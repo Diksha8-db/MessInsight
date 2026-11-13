@@ -31,16 +31,39 @@ export function middleware(req: NextRequest) {
   // ── CSRF: same-origin check for state-changing API calls ──────────────────
   if (pathname.startsWith('/api/') && MUTATING_METHODS.has(req.method)) {
     if (!PUBLIC_API_ROUTES.has(pathname)) {
-      const origin = req.headers.get('origin') || req.headers.get('referer') || '';
-      if (origin && !origin.startsWith(appUrl)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message: 'Cross-origin request blocked.',
-            error: { code: 'FORBIDDEN', correlationId: crypto.randomUUID() },
-          },
-          { status: 403 }
-        );
+      const origin = req.headers.get('origin');
+      const host = req.headers.get('host');
+
+      if (origin && host) {
+        try {
+          const originHost = new URL(origin).host;
+          // Valid if origin matches current host or configured appUrl
+          const isSameOrigin =
+            originHost === host ||
+            (appUrl && origin.startsWith(appUrl)) ||
+            (process.env.VERCEL_URL && originHost.endsWith('.vercel.app'));
+
+          if (!isSameOrigin) {
+            return NextResponse.json(
+              {
+                success: false,
+                message: 'Cross-origin request blocked.',
+                error: { code: 'FORBIDDEN', correlationId: crypto.randomUUID() },
+              },
+              { status: 403 }
+            );
+          }
+        } catch {
+          // If origin is malformed, reject
+          return NextResponse.json(
+            {
+              success: false,
+              message: 'Invalid request origin.',
+              error: { code: 'FORBIDDEN', correlationId: crypto.randomUUID() },
+            },
+            { status: 403 }
+          );
+        }
       }
     }
   }
