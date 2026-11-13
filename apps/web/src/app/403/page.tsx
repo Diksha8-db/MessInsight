@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Forbidden() {
   return (
     <main className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -8,12 +10,12 @@ export default function Forbidden() {
           You do not have permission to view this page. Please contact an administrator if you
           believe this is a mistake.
         </p>
-        <a
+        <Link
           href="/"
           className="inline-block mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Go Home
-        </a>
+        </Link>
       </div>
     </main>
   );

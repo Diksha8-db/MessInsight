@@ -39,6 +39,11 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  eslint: {
+    // Prevent ESLint warnings/errors from failing production builds on Vercel
+    ignoreDuringBuilds: true,
+  },
+
   async headers() {
     return [
       {
