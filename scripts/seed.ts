@@ -55,21 +55,22 @@ export async function runSeed(mongoUri?: string) {
 
     const dummyMessId = new mongoose.Types.ObjectId();
 
-    console.log('[Seed] Creating demo users (Password: Password@123)...');
+    const domain = (process.env.INSTITUTE_EMAIL_DOMAIN || 'nitp.ac.in').toLowerCase().trim();
+    console.log(`[Seed] Creating demo users for domain @${domain} (Password: Password@123)...`);
     // Pre-computed bcrypt hash of "Password@123"
     const defaultPasswordHash = '$2b$10$jogm82M.24jwZWMyO/VtaOmFlj0iKaw26.eeOz3qn7gcMSSetvvOG';
 
     const [admin, manager, student1, student2] = await Promise.all([
       UserModel.create({
         name: 'Campus Administrator',
-        instituteEmail: 'admin@college.edu',
+        instituteEmail: `admin@${domain}`,
         passwordHash: defaultPasswordHash,
         role: UserRole.ADMIN,
         isVerified: true,
       }),
       UserModel.create({
         name: 'Hostel A Mess Manager',
-        instituteEmail: 'manager.hostela@college.edu',
+        instituteEmail: `manager.hostela@${domain}`,
         passwordHash: defaultPasswordHash,
         role: UserRole.MANAGER,
         assignedMessId: dummyMessId,
@@ -77,14 +78,14 @@ export async function runSeed(mongoUri?: string) {
       }),
       UserModel.create({
         name: 'Aarav Sharma',
-        instituteEmail: 'aarav.sharma@college.edu',
+        instituteEmail: `aarav.sharma@${domain}`,
         passwordHash: defaultPasswordHash,
         role: UserRole.STUDENT,
         isVerified: true,
       }),
       UserModel.create({
         name: 'Diya Patel',
-        instituteEmail: 'diya.patel@college.edu',
+        instituteEmail: `diya.patel@${domain}`,
         passwordHash: defaultPasswordHash,
         role: UserRole.STUDENT,
         isVerified: true,
@@ -287,10 +288,10 @@ export async function runSeed(mongoUri?: string) {
     console.log('  MESSINSIGHT DEMO DATABASE SEEDED SUCCESSFULLY!           ');
     console.log('=============================================================');
     console.log('  Login Credentials (all accounts password: Password@123):  ');
-    console.log('  - Admin:   admin@college.edu                              ');
-    console.log('  - Manager: manager.hostela@college.edu                    ');
-    console.log('  - Student: aarav.sharma@college.edu                       ');
-    console.log('  - Student: diya.patel@college.edu                         ');
+    console.log(`  - Admin:   admin@${domain}`);
+    console.log(`  - Manager: manager.hostela@${domain}`);
+    console.log(`  - Student: aarav.sharma@${domain}`);
+    console.log(`  - Student: diya.patel@${domain}`);
     console.log('=============================================================\n');
 
     return { admin, manager, student1, student2, menu, dummyMessId };
