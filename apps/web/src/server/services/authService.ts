@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { connectDb } from '../lib/db';
 import { UserRepository } from '../repositories/UserRepository';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { UserRole, IUser } from '../models/User';
@@ -51,6 +52,7 @@ export class AuthService {
   }
 
   static async register(input: RegisterInput, correlationId: string) {
+    await connectDb();
     const email = input.instituteEmail.toLowerCase().trim();
     logger.info('[AuthService] Initiating registration', correlationId, { email });
     const existing = await UserRepository.findByEmail(email);
@@ -95,6 +97,7 @@ export class AuthService {
   }
 
   static async verifyEmail(input: VerifyEmailInput, correlationId: string) {
+    await connectDb();
     const email = input.instituteEmail.toLowerCase().trim();
     logger.info('[AuthService] Verifying email OTP', correlationId, { email });
     const user = await UserRepository.findByEmail(email);
@@ -152,6 +155,7 @@ export class AuthService {
   }
 
   static async resendOtp(input: ResendOtpInput) {
+    await connectDb();
     const email = input.instituteEmail.toLowerCase().trim();
     const user = await UserRepository.findByEmail(email);
 
@@ -195,6 +199,7 @@ export class AuthService {
   }
 
   static async login(input: LoginInput, correlationId: string): Promise<AuthSessionResult> {
+    await connectDb();
     const email = input.instituteEmail.toLowerCase().trim();
     const user = await UserRepository.findByEmail(email);
 
@@ -285,6 +290,7 @@ export class AuthService {
   }
 
   static async forgotPassword(input: ForgotPasswordInput, correlationId: string) {
+    await connectDb();
     const email = input.instituteEmail.toLowerCase().trim();
     logger.info('[AuthService] Forgot password requested', correlationId, { email });
     const user = await UserRepository.findByEmail(email);
@@ -313,6 +319,7 @@ export class AuthService {
   }
 
   static async resetPassword(input: ResetPasswordInput, correlationId: string) {
+    await connectDb();
     const resetHash = hashToken(input.token);
 
     // Find user with matching reset token and unexpired window

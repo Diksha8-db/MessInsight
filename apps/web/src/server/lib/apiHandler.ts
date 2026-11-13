@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { AppError, ErrorCode } from './errors';
 import { createErrorResponse } from './response';
 import { logger } from './logger';
+import { connectToDatabase } from './db';
 
 export interface ApiHandlerContext<TParams = Record<string, string>> {
   correlationId: string;
@@ -46,6 +47,10 @@ export function withApiHandler<TParams = Record<string, string>>(
     logger.info(`[API Request] ${method} ${url}`, correlationId);
 
     try {
+      if (process.env.NODE_ENV !== 'test') {
+        await connectToDatabase();
+      }
+
       const response = await handler(req, {
         correlationId,
         params: routeContext?.params,
