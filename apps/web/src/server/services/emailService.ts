@@ -55,6 +55,10 @@ export class ConsoleEmailService implements IEmailService {
     }
 
     if (process.env.NODE_ENV !== 'test') {
+      console.log('\n======================================================');
+      console.log(`✉️  [DEV EMAIL SINK] Dispatched OTP for ${toEmail}`);
+      console.log(`👉  VERIFICATION CODE: [ ${otp} ]`);
+      console.log('======================================================\n');
       logger.info(`[Email Service] Dispatched OTP verification email to ${toEmail}`);
     }
 
@@ -69,6 +73,10 @@ export class ConsoleEmailService implements IEmailService {
     }
 
     if (process.env.NODE_ENV !== 'test') {
+      console.log('\n======================================================');
+      console.log(`✉️  [DEV EMAIL SINK] Password Reset Link for ${toEmail}`);
+      console.log(`👉  RESET URL: ${resetUrl}`);
+      console.log('======================================================\n');
       logger.info(`[Email Service] Dispatched password reset email to ${toEmail}`);
     }
 

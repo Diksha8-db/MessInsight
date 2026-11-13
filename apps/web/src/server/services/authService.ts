@@ -87,11 +87,16 @@ export class AuthService {
 
     const emailResult = await emailService.sendOtpEmail(email, otp);
 
+    const isDev = process.env.NODE_ENV !== 'production';
+    const successMsg = isDev
+      ? `Registration successful! (Dev Code: ${otp})`
+      : 'Registration successful. Please enter the verification OTP sent to your institute email.';
+
     return {
       user: this.sanitizeUser(user),
       emailSent: emailResult.success,
       message: emailResult.success
-        ? 'Registration successful. Please enter the verification OTP sent to your institute email.'
+        ? successMsg
         : 'Registration completed, but verification email delivery failed. You may use the resend option.',
     };
   }
@@ -190,9 +195,14 @@ export class AuthService {
 
     const emailResult = await emailService.sendOtpEmail(email, otp);
 
+    const isDev = process.env.NODE_ENV !== 'production';
+    const resendMsg = isDev
+      ? `A fresh verification OTP has been sent! (Dev Code: ${otp})`
+      : 'A fresh verification OTP has been sent to your email.';
+
     return {
       message: emailResult.success
-        ? 'A fresh verification OTP has been sent to your email.'
+        ? resendMsg
         : 'Could not deliver email at this time. Please try again shortly.',
       emailSent: emailResult.success,
     };
