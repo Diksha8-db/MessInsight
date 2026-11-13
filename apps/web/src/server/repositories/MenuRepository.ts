@@ -29,16 +29,19 @@ export class MenuRepository {
   }
 
   static async findPublishedWeekly(
-    messId: string | mongoose.Types.ObjectId,
+    messId: string | mongoose.Types.ObjectId | undefined,
     startDate: string,
     endDate: string
   ): Promise<IMenu[]> {
-    return MenuModel.find({
-      messId,
+    const query: Record<string, unknown> = {
       serviceDate: { $gte: startDate, $lte: endDate },
       status: MenuStatus.PUBLISHED,
       isDeleted: false,
-    })
+    };
+    if (messId) {
+      query.messId = messId;
+    }
+    return MenuModel.find(query)
       .sort({ serviceDate: 1, mealType: 1 })
       .exec();
   }

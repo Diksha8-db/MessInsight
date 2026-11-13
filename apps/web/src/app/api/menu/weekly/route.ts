@@ -7,7 +7,7 @@ import { MenuService } from '@/server/services/menuService';
 import { AppError, ErrorCode } from '@/server/lib/errors';
 
 const querySchema = z.object({
-  messId: z.string().min(1, 'messId is required'),
+  messId: z.string().optional(),
   startDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'startDate must be YYYY-MM-DD')
@@ -15,9 +15,10 @@ const querySchema = z.object({
 });
 
 export const GET = withApiHandler(async (req: NextRequest, { correlationId }) => {
-  await requireAuth(req);
+  const session = await requireAuth(req);
   const params = Object.fromEntries(req.nextUrl.searchParams.entries());
   const { messId, startDate } = querySchema.parse(params);
+  const resolvedMessId = messId || session.messId || undefined;
 
   // Default startDate to today (mess timezone)
   const resolvedStart =
@@ -26,7 +27,7 @@ export const GET = withApiHandler(async (req: NextRequest, { correlationId }) =>
       .toLocaleDateString('en-CA', { timeZone: process.env.MESS_TIMEZONE || 'Asia/Kolkata' })
       .slice(0, 10);
 
-  const weekly = await MenuService.getWeeklyMenu(messId, resolvedStart);
+  const weekly = await MenuService.getWeeklyMenu(resolvedMessId, resolvedStart);
   return createSuccessResponse(weekly, 'Weekly menu retrieved');
 });
 

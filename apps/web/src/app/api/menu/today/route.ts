@@ -7,12 +7,7 @@ import { MenuService } from '@/server/services/menuService';
 
 export const GET = withApiHandler(async (req: NextRequest, { correlationId }) => {
   const session = await requireAuth(req);
-  const messId = req.nextUrl.searchParams.get('messId') || '';
-
-  if (!messId) {
-    const { AppError, ErrorCode } = await import('@/server/lib/errors');
-    throw AppError.badRequest('messId query parameter is required', ErrorCode.BAD_REQUEST);
-  }
+  const messId = req.nextUrl.searchParams.get('messId') || session.messId || undefined;
 
   const menus = await MenuService.getTodayMenu(messId);
   return createSuccessResponse(menus, "Today's menu retrieved");

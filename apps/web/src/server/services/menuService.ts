@@ -270,13 +270,13 @@ export class MenuService {
 
   // ── Read — Student (PUBLISHED only) ──────────────────────────────────────
 
-  static async getTodayMenu(messId: string) {
+  static async getTodayMenu(messId?: string) {
     const today = todayInMessTz();
     const menus = await MenuRepository.findPublishedWeekly(messId, today, today);
     return menus.map(sanitizeMenu);
   }
 
-  static async getWeeklyMenu(messId: string, startDate: string) {
+  static async getWeeklyMenu(messId: string | undefined, startDate: string) {
     // Build 7-day range
     const start = new Date(startDate);
     const end = new Date(start);
