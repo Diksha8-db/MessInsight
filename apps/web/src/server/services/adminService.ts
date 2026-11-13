@@ -127,9 +127,6 @@ export class AdminService {
   ) {
     const target = await UserRepository.findById(targetId);
     if (!target) throw AppError.notFound('User not found.', ErrorCode.NOT_FOUND);
-    if (!target.isVerified) {
-      throw AppError.badRequest('Cannot promote an unverified user to manager.', ErrorCode.BAD_REQUEST);
-    }
     if (target.isBlocked) {
       throw AppError.badRequest('Cannot assign a blocked user as manager.', ErrorCode.BAD_REQUEST);
     }
@@ -138,6 +135,7 @@ export class AdminService {
 
     await UserRepository.update(target._id, {
       role: UserRole.MANAGER,
+      isVerified: true,
       assignedMessId: new mongoose.Types.ObjectId(messId),
       $inc: { tokenVersion: 1 }, // Role change takes effect immediately
     });

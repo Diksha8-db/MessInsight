@@ -37,7 +37,7 @@ export const updateMenuSchema = z.object({
 // ── Publish ───────────────────────────────────────────────────────────────────
 export const publishMenuSchema = z.object({
   menuId: z.string().min(1, 'menuId is required'),
-  version: z.number().int().min(1),
+  version: z.number().int().min(1).default(1),
   allowBackfill: z.boolean().default(false),
 });
 

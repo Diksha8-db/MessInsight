@@ -102,6 +102,7 @@ export default function ManagerDashboard() {
         await apiClient.post('/api/manager/menu/publish', {
           messId: user.messId,
           menuId: menuRes.data.id,
+          version: 1,
         });
       }
 

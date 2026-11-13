@@ -2,10 +2,10 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { withApiHandler } from '@/server/lib/apiHandler';
 import { createSuccessResponse } from '@/server/lib/response';
-import { requireManager } from '@/server/middleware/guards';
-import { requireMessScope, rejectClientIdentity } from '@/server/middleware/guards';
+import { requireManager, requireMessScope } from '@/server/middleware/guards';
 import { MenuService } from '@/server/services/menuService';
 import { createMenuSchema, menuListQuerySchema } from '@/server/validators/menuValidators';
+import { AppError, ErrorCode } from '@/server/lib/errors';
 
 export const GET = withApiHandler(async (req: NextRequest, { correlationId }) => {
   const session = await requireManager(req);
@@ -25,15 +25,18 @@ export const GET = withApiHandler(async (req: NextRequest, { correlationId }) =>
 export const POST = withApiHandler(async (req: NextRequest, { correlationId }) => {
   const session = await requireManager(req);
   const body = await req.json();
-  rejectClientIdentity(body);
 
-  const { messId, ...rest } = z
-    .object({ messId: z.string().min(1) })
-    .passthrough()
-    .parse(body);
+  const messId = session.messId || body.messId;
+  if (!messId) {
+    throw AppError.badRequest('No mess assigned to this manager session.', ErrorCode.BAD_REQUEST);
+  }
   requireMessScope(session, messId);
 
-  const input = createMenuSchema.parse(rest);
+  delete body.messId;
+  delete body.userId;
+  delete body.role;
+
+  const input = createMenuSchema.parse(body);
   const menu = await MenuService.createMenu(messId, input, correlationId);
   return createSuccessResponse(menu, 'Menu created successfully', 201);
 });
