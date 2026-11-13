@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # 1. MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: messinsight-mongo
+    restart: always
+    ports:
+      - '27017:27017'
+    environment:
+      MONGO_INITDB_DATABASE: messinsight
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Python ML Microservice (FastAPI)
+  ml-service:
+    build:
+      context: ./services/ml-service
+      dockerfile: Dockerfile
+    container_name: messinsight-ml
+    restart: always
+    ports:
+      - '8000:8000'
+    environment:
+      - PORT=8000
+      - ML_SERVICE_SECRET=super-secret-ml-key-change-me
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # 3. Next.js 15 Web Application
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: messinsight-web
+    restart: always
+    ports:
+      - '3000:3000'
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+      - MONGODB_URI=mongodb://mongodb:27017/messinsight
+      - JWT_SECRET=super-secret-production-jwt-key-minimum-32-chars-long
+      - JWT_EXPIRES_IN=7d
+      - COOKIE_NAME=messinsight_session
+      - INSTITUTE_EMAIL_DOMAIN=college.edu
+      - MESS_TIMEZONE=Asia/Kolkata
+      - ML_SERVICE_URL=http://ml-service:8000
+      - ML_SERVICE_SECRET=super-secret-ml-key-change-me
+      - EMAIL_PROVIDER=console
+      - EMAIL_FROM=no-reply@college.edu
+      - STORAGE_PROVIDER=local
+      - STORAGE_LOCAL_DIR=./uploads
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
+    driver: local

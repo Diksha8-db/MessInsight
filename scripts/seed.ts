@@ -9,10 +9,21 @@ import {
   MenuStatus,
   SettingsModel,
   AllowedUnit,
+  AttendanceRecordModel,
+  WasteRecordModel,
+  FeedbackModel,
+  ComplaintModel,
+  ComplaintCategory,
+  ComplaintPriority,
+  ComplaintStatus,
+  SentimentLabel,
+  SentimentStatus,
+  ModerationStatus,
 } from '../apps/web/src/server/models';
 
 /**
  * MessInsight Database Seeding Script
+ * Populates realistic initial data for development & testing.
  * STRICT RULE: Refuses execution when NODE_ENV=production
  */
 export async function runSeed(mongoUri?: string) {
@@ -30,53 +41,57 @@ export async function runSeed(mongoUri?: string) {
   }
 
   try {
-    console.log('[Seed] Clearing existing collections (development only)...');
+    console.log('[Seed] Clearing existing demo collections...');
     await Promise.all([
       UserModel.deleteMany({}),
       MenuModel.deleteMany({}),
       DishModel.deleteMany({}),
       SettingsModel.deleteMany({}),
+      AttendanceRecordModel.deleteMany({}),
+      WasteRecordModel.deleteMany({}),
+      FeedbackModel.deleteMany({}),
+      ComplaintModel.deleteMany({}),
     ]);
 
     const dummyMessId = new mongoose.Types.ObjectId();
 
-    console.log('[Seed] Creating demo users...');
-    // Using pre-hashed placeholder for development
-    const sampleHash = '$2b$10$abcdefghijklmnopqrstuv1234567890abcdefghijklmnopqrstuv';
+    console.log('[Seed] Creating demo users (Password: Password@123)...');
+    // Pre-computed bcrypt hash of "Password@123"
+    const defaultPasswordHash = '$2b$10$jogm82M.24jwZWMyO/VtaOmFlj0iKaw26.eeOz3qn7gcMSSetvvOG';
 
     const [admin, manager, student1, student2] = await Promise.all([
       UserModel.create({
         name: 'Campus Administrator',
         instituteEmail: 'admin@college.edu',
-        passwordHash: sampleHash,
+        passwordHash: defaultPasswordHash,
         role: UserRole.ADMIN,
         isVerified: true,
       }),
       UserModel.create({
         name: 'Hostel A Mess Manager',
         instituteEmail: 'manager.hostela@college.edu',
-        passwordHash: sampleHash,
+        passwordHash: defaultPasswordHash,
         role: UserRole.MANAGER,
         assignedMessId: dummyMessId,
         isVerified: true,
       }),
       UserModel.create({
-        name: 'Aarav Sharma (Student)',
+        name: 'Aarav Sharma',
         instituteEmail: 'aarav.sharma@college.edu',
-        passwordHash: sampleHash,
+        passwordHash: defaultPasswordHash,
         role: UserRole.STUDENT,
         isVerified: true,
       }),
       UserModel.create({
-        name: 'Diya Patel (Student)',
+        name: 'Diya Patel',
         instituteEmail: 'diya.patel@college.edu',
-        passwordHash: sampleHash,
+        passwordHash: defaultPasswordHash,
         role: UserRole.STUDENT,
         isVerified: true,
       }),
     ]);
 
-    console.log(`[Seed] Users created: 1 Admin (${admin.instituteEmail}), 1 Manager (${manager.instituteEmail}), 2 Students`);
+    console.log(`[Seed] Created users: 1 Admin, 1 Manager, 2 Students`);
 
     console.log('[Seed] Creating sample dishes...');
     const dishes = await DishModel.insertMany([
@@ -90,7 +105,7 @@ export async function runSeed(mongoUri?: string) {
 
     console.log(`[Seed] Created ${dishes.length} dishes.`);
 
-    console.log('[Seed] Creating today published menu...');
+    console.log('[Seed] Creating published menus...');
     const todayStr = new Date().toISOString().split('T')[0];
 
     const menu = await MenuModel.create({
@@ -108,7 +123,152 @@ export async function runSeed(mongoUri?: string) {
       })),
     });
 
-    console.log(`[Seed] Created Menu for ${todayStr} (${menu.mealType}) with ID: ${menu._id}`);
+    console.log('[Seed] Creating historical attendance records (past 14 days)...');
+    const attendanceRecords = [];
+    const baseDate = new Date();
+    for (let i = 14; i >= 0; i--) {
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+
+      // Breakfast, Lunch, Dinner records
+      attendanceRecords.push({
+        messId: dummyMessId,
+        serviceDate: dateStr,
+        mealType: MealType.BREAKFAST,
+        actualAttendance: 320 + Math.floor(Math.sin(i) * 30),
+        recordedBy: manager._id,
+        isManualEdit: false,
+      });
+      attendanceRecords.push({
+        messId: dummyMessId,
+        serviceDate: dateStr,
+        mealType: MealType.LUNCH,
+        actualAttendance: 480 + Math.floor(Math.cos(i) * 40),
+        recordedBy: manager._id,
+        isManualEdit: false,
+      });
+      attendanceRecords.push({
+        messId: dummyMessId,
+        serviceDate: dateStr,
+        mealType: MealType.DINNER,
+        actualAttendance: 450 + Math.floor(Math.sin(i + 1) * 35),
+        recordedBy: manager._id,
+        isManualEdit: false,
+      });
+    }
+    await AttendanceRecordModel.insertMany(attendanceRecords);
+
+    console.log('[Seed] Creating waste records...');
+    const wasteRecords = [
+      {
+        messId: dummyMessId,
+        serviceDate: todayStr,
+        mealType: MealType.LUNCH,
+        ingredient: 'Rice',
+        preparedQuantity: 50,
+        consumedQuantity: 46,
+        leftoverQuantity: 3.5,
+        unaccountedDiff: 0.5,
+        unit: AllowedUnit.KG,
+        recordedBy: manager._id,
+      },
+      {
+        messId: dummyMessId,
+        serviceDate: todayStr,
+        mealType: MealType.LUNCH,
+        ingredient: 'Dal',
+        preparedQuantity: 40,
+        consumedQuantity: 37,
+        leftoverQuantity: 2.8,
+        unaccountedDiff: 0.2,
+        unit: AllowedUnit.KG,
+        recordedBy: manager._id,
+      },
+      {
+        messId: dummyMessId,
+        serviceDate: todayStr,
+        mealType: MealType.LUNCH,
+        ingredient: 'Paneer',
+        preparedQuantity: 35,
+        consumedQuantity: 34,
+        leftoverQuantity: 0.8,
+        unaccountedDiff: 0.2,
+        unit: AllowedUnit.KG,
+        recordedBy: manager._id,
+      },
+    ];
+    await WasteRecordModel.insertMany(wasteRecords);
+
+    console.log('[Seed] Creating sample feedbacks...');
+    await FeedbackModel.insertMany([
+      {
+        studentId: student1._id,
+        menuId: menu._id,
+        messId: dummyMessId,
+        serviceDate: todayStr,
+        mealType: MealType.LUNCH,
+        overallRating: 5,
+        dishRatings: [
+          { dishId: dishes[0]._id, rating: 5 },
+          { dishId: dishes[2]._id, rating: 5 },
+        ],
+        comments: 'Dal Makhani and Paneer were bahut swadist! Best meal this week.',
+        isAnonymous: false,
+        moderationStatus: ModerationStatus.OK,
+        sentiment: {
+          label: SentimentLabel.POSITIVE,
+          score: 0.85,
+          confidence: 0.94,
+          status: SentimentStatus.DONE,
+          modelVersion: 'v1.0',
+        },
+        dishesMentioned: ['Dal Makhani', 'Paneer Butter Masala'],
+        issues: [],
+        isDeleted: false,
+      },
+      {
+        studentId: student2._id,
+        menuId: menu._id,
+        messId: dummyMessId,
+        serviceDate: todayStr,
+        mealType: MealType.LUNCH,
+        overallRating: 2,
+        dishRatings: [{ dishId: dishes[1]._id, rating: 2 }],
+        comments: 'Rice was a bit cold today and dal was too salty.',
+        isAnonymous: true,
+        moderationStatus: ModerationStatus.OK,
+        sentiment: {
+          label: SentimentLabel.NEGATIVE,
+          score: -0.65,
+          confidence: 0.88,
+          status: SentimentStatus.DONE,
+          modelVersion: 'v1.0',
+        },
+        dishesMentioned: ['Jeera Rice', 'Dal Makhani'],
+        issues: [{ type: 'TOO_SALTY', dish: 'Dal Makhani' }, { type: 'COLD_FOOD', dish: 'Jeera Rice' }],
+        isDeleted: false,
+      },
+    ]);
+
+    console.log('[Seed] Creating sample complaint...');
+    await ComplaintModel.create({
+      studentId: student2._id,
+      messId: dummyMessId,
+      category: ComplaintCategory.FOOD_HYGIENE,
+      priority: ComplaintPriority.MEDIUM,
+      status: ComplaintStatus.OPEN,
+      title: 'Water dispenser tap loose on Ground Floor',
+      description: 'The drinking water dispenser tap leaks and needs maintenance.',
+      history: [
+        {
+          status: ComplaintStatus.OPEN,
+          changedBy: student2._id,
+          note: 'Complaint registered by student.',
+          timestamp: new Date(),
+        },
+      ],
+    });
 
     console.log('[Seed] Creating Mess Settings...');
     await SettingsModel.create({
@@ -123,7 +283,16 @@ export async function runSeed(mongoUri?: string) {
       ],
     });
 
-    console.log('[Seed] Completed database seeding successfully.');
+    console.log('\n=============================================================');
+    console.log('  MESSINSIGHT DEMO DATABASE SEEDED SUCCESSFULLY!           ');
+    console.log('=============================================================');
+    console.log('  Login Credentials (all accounts password: Password@123):  ');
+    console.log('  - Admin:   admin@college.edu                              ');
+    console.log('  - Manager: manager.hostela@college.edu                    ');
+    console.log('  - Student: aarav.sharma@college.edu                       ');
+    console.log('  - Student: diya.patel@college.edu                         ');
+    console.log('=============================================================\n');
+
     return { admin, manager, student1, student2, menu, dummyMessId };
   } finally {
     if (isConnectedLocal) {

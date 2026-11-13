@@ -13,6 +13,7 @@
     "typecheck": "npm run typecheck --workspace=web",
     "test": "npm run test --workspace=web",
     "test:e2e": "npm run test:e2e --workspace=web",
+    "seed": "npx tsx scripts/seed.ts",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\""
   },
