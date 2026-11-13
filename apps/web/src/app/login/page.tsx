@@ -3,8 +3,8 @@
 import React, { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { apiClient } from '@/lib/apiClient';
+import { Eye, EyeOff, Loader2, AlertCircle, Info } from 'lucide-react';
+import { apiClient, ApiClientError } from '@/lib/apiClient';
 
 interface LoginUser {
   id: string;
