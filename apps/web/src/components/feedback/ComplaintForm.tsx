@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { apiClient } from '@/lib/apiClient';
-import { ComplaintCategory, ComplaintPriority } from '@/server/models/Complaint';
+import { ComplaintCategory, ComplaintPriority } from '@/types/complaint';
 import { AlertCircle, CheckCircle, Upload, X } from 'lucide-react';
 
 const complaintSchema = z.object({

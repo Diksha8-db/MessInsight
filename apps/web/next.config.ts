@@ -47,6 +47,26 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      // Prevent Node.js-only modules from being bundled for the browser
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        net: false,
+        tls: false,
+        child_process: false,
+        fs: false,
+        'fs/promises': false,
+        dns: false,
+        os: false,
+        path: false,
+        stream: false,
+        crypto: false,
+      };
+    }
+    return config;
+  },
 };
 
 export default nextConfig;

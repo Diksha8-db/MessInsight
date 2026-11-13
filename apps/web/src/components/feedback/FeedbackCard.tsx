@@ -2,11 +2,11 @@
 
 import React from 'react';
 import { StarRating } from './StarRating';
-import { IFeedback } from '@/server/models/Feedback';
+import type { IFeedbackClient } from '@/types/feedback';
 import { Clock, ShieldAlert, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
 
 interface FeedbackCardProps {
-  feedback: Partial<IFeedback> & { _id: string; createdAt?: string | Date };
+  feedback: Partial<IFeedbackClient> & { _id: string; createdAt?: string | Date };
   onEdit?: (feedback: any) => void;
   onDelete?: (id: string) => void;
   canEdit?: boolean;
