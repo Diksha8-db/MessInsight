@@ -31,3 +31,17 @@ export const GET = withApiHandler(async (req: NextRequest, { correlationId }) =>
   });
 });
 
+const createManagerSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters'),
+  email: z.string().trim().toLowerCase().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  messName: z.string().optional(),
+});
+
+export const POST = withApiHandler(async (req: NextRequest, { correlationId }) => {
+  const session = await requireAdmin(req);
+  const body = createManagerSchema.parse(await req.json());
+  const result = await AdminService.createManager(session.sub, body, correlationId);
+  return createSuccessResponse(result, result.message, 201);
+});
+

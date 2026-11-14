@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/apiClient';
-import { Search, ChevronLeft, ChevronRight, UserCog, ShieldOff, Trash2, KeyRound, UserX, UserCheck, Info } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, UserCog, ShieldOff, Trash2, KeyRound, UserX, UserCheck, Info, UserPlus, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -43,6 +43,16 @@ export default function AdminUsersPage() {
   const [actionMsg, setActionMsg] = useState('');
   const [actionOk, setActionOk] = useState(false);
 
+  // New Manager modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createName, setCreateName] = useState('');
+  const [createEmail, setCreateEmail] = useState('');
+  const [createPassword, setCreatePassword] = useState('');
+  const [createMessName, setCreateMessName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState('');
+
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
@@ -76,6 +86,38 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleCreateManager(e: React.FormEvent) {
+    e.preventDefault();
+    setCreateError('');
+    setCreateSuccess('');
+    setCreating(true);
+
+    try {
+      const res = await apiClient.post<{ message?: string }>('/api/admin/users', {
+        name: createName,
+        email: createEmail,
+        password: createPassword,
+        messName: createMessName,
+      });
+
+      setCreateSuccess(res.message || 'Manager created successfully!');
+      setTimeout(() => {
+        setShowCreateModal(false);
+        setCreateName('');
+        setCreateEmail('');
+        setCreatePassword('');
+        setCreateMessName('');
+        setCreateSuccess('');
+      }, 1200);
+      load();
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      setCreateError(e.message || 'Failed to create manager.');
+    } finally {
+      setCreating(false);
+    }
+  }
+
   const statusBadge = (u: User) => {
     if (u.isBlocked) return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-medium">Blocked</span>;
     if (!u.isVerified) return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-xs font-medium">Unverified</span>;
@@ -95,15 +137,27 @@ export default function AdminUsersPage() {
         <span>To make a user a Mess Manager: click <strong>Make Manager</strong>, enter a Mess Name (e.g. <em>Hostel A Mess</em>), then confirm. A new Mess ID is auto-generated.</span>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-        <input
-          className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-          placeholder="Search by name or email…"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-        />
+      {/* Search & Actions */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+          <input
+            className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            placeholder="Search by name or email…"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+          />
+        </div>
+        <button
+          onClick={() => {
+            setShowCreateModal(true);
+            setCreateError('');
+            setCreateSuccess('');
+          }}
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
+        >
+          <UserPlus size={16} /> Add New Manager
+        </button>
       </div>
 
       {error && <div className="p-3 bg-red-50 text-red-700 rounded-xl text-sm border border-red-100">{error}</div>}
@@ -187,6 +241,106 @@ export default function AdminUsersPage() {
         </div>
       ) : (
         <div className="text-slate-400 text-sm py-12 text-center bg-white rounded-2xl border border-slate-200">No users found.</div>
+      )}
+
+      {/* Create Manager Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
+                <UserPlus size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-slate-800">Add New Mess Manager</h2>
+                <p className="text-xs text-slate-500">Create a manager account directly with assigned mess</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateManager} className="space-y-3 pt-2">
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 block">Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 block">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="manager@example.com"
+                  value={createEmail}
+                  onChange={(e) => setCreateEmail(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 block">Password</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Min 8 characters (e.g. Password@123)"
+                  value={createPassword}
+                  onChange={(e) => setCreatePassword(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-600 uppercase tracking-wide mb-1 block">
+                  Mess / Canteen Name <span className="text-slate-400 font-normal lowercase">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Hostel A Mess"
+                  value={createMessName}
+                  onChange={(e) => setCreateMessName(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {createError && (
+                <div className="p-3 bg-red-50 text-red-700 rounded-xl text-xs border border-red-100">
+                  {createError}
+                </div>
+              )}
+
+              {createSuccess && (
+                <div className="p-3 bg-green-50 text-green-700 rounded-xl text-xs border border-green-100 flex items-center gap-1.5">
+                  <CheckCircle2 size={16} />
+                  <span>{createSuccess}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2 justify-end pt-3">
+                <button
+                  type="button"
+                  disabled={creating}
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={creating}
+                  className="inline-flex items-center gap-2 px-5 py-2 text-sm font-semibold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 transition-colors"
+                >
+                  {creating ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
+                  {creating ? 'Creating…' : 'Create Manager'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Modal */}

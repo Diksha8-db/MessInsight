@@ -152,6 +152,46 @@ export class AdminService {
     return { message: `${target.name} has been assigned as manager for mess ${messId}.` };
   }
 
+  static async createManager(
+    adminId: string,
+    data: { name: string; email: string; password: string; messName?: string },
+    correlationId: string
+  ) {
+    const email = data.email.toLowerCase().trim();
+    const existing = await UserRepository.findByEmail(email);
+    if (existing) {
+      throw AppError.conflict('An account with this email already exists.', ErrorCode.CONFLICT);
+    }
+
+    const passwordHash = await hashPassword(data.password);
+    const messId = new mongoose.Types.ObjectId();
+
+    const user = await UserRepository.create({
+      name: data.name.trim(),
+      instituteEmail: email,
+      passwordHash,
+      role: UserRole.MANAGER,
+      assignedMessId: messId,
+      isVerified: true,
+      isBlocked: false,
+      tokenVersion: 0,
+    });
+
+    await AuditLogRepository.log(
+      new mongoose.Types.ObjectId(adminId),
+      'ADMIN_CREATE_MANAGER',
+      'Users',
+      correlationId,
+      `Admin created new manager account ${email} for mess ${data.messName || messId.toString()}`,
+      user._id
+    );
+
+    return {
+      message: `Manager ${data.name} created successfully.`,
+      user: sanitizeUser(user),
+    };
+  }
+
   static async removeManager(adminId: string, targetId: string, correlationId: string) {
     const target = await UserRepository.findById(targetId);
     if (!target) throw AppError.notFound('User not found.', ErrorCode.NOT_FOUND);
