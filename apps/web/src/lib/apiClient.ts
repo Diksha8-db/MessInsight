@@ -146,6 +146,14 @@ apiClient.post = function <T>(endpoint: string, body?: unknown, options?: Reques
   });
 };
 
+apiClient.put = function <T>(endpoint: string, body?: unknown, options?: RequestInit) {
+  return apiClient<T>(endpoint, {
+    ...options,
+    method: 'PUT',
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+};
+
 apiClient.patch = function <T>(endpoint: string, body?: unknown, options?: RequestInit) {
   return apiClient<T>(endpoint, {
     ...options,

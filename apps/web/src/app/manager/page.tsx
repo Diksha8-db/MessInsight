@@ -86,23 +86,53 @@ export default function ManagerDashboard() {
     setSubmitting(true);
     setResult(null);
     try {
-      const today = new Date().toISOString().split('T')[0];
-      const menuRes = await apiClient.post<{ id: string }>('/api/manager/menu', {
-        messId: user.messId,
-        serviceDate: today,
-        mealType,
-        dishes: validDishes.map(d => ({
-          name: d.name.trim(),
-          category: d.category,
-          isAvailable: true,
-        })),
-      });
+      // Use mess timezone (Asia/Kolkata) to format YYYY-MM-DD so early morning hours (00:00-05:30 IST) don't roll back to yesterday in UTC
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+      let menuId: string | undefined;
+      let version = 1;
 
-      if (menuRes.data?.id) {
+      try {
+        const menuRes = await apiClient.post<{ id: string }>('/api/manager/menu', {
+          messId: user.messId,
+          serviceDate: today,
+          mealType,
+          dishes: validDishes.map(d => ({
+            name: d.name.trim(),
+            category: d.category,
+            isAvailable: true,
+          })),
+        });
+        menuId = menuRes.data?.id;
+      } catch (createErr: unknown) {
+        // If a menu already exists for today and this meal type, fetch and update it instead of failing
+        const listRes = await apiClient.get<{ menus: Array<{ id: string; serviceDate: string; mealType: string; version: number }> }>(
+          `/api/manager/menu?messId=${user.messId}&fromDate=${today}&toDate=${today}`
+        ).catch(() => null);
+
+        const existing = listRes?.data?.menus?.find(m => m.serviceDate === today && m.mealType === mealType);
+        if (existing) {
+          menuId = existing.id;
+          version = existing.version;
+          const updateRes = await apiClient.put<{ version: number }>(`/api/manager/menu/${menuId}`, {
+            messId: user.messId,
+            version,
+            dishes: validDishes.map(d => ({
+              name: d.name.trim(),
+              category: d.category,
+              isAvailable: true,
+            })),
+          });
+          version = updateRes.data?.version ?? (version + 1);
+        } else {
+          throw createErr;
+        }
+      }
+
+      if (menuId) {
         await apiClient.post('/api/manager/menu/publish', {
           messId: user.messId,
-          menuId: menuRes.data.id,
-          version: 1,
+          menuId,
+          version,
         });
       }
 
