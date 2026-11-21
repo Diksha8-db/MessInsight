@@ -178,11 +178,27 @@ describe('Phase 2: Authentication Service & Edge Cases (AUTH-01 to AUTH-24)', ()
         { instituteEmail: validRegistration.instituteEmail, password: 'WrongPassword!' },
         'corr-login-fail-5'
       )
-    ).rejects.toThrow(/temporarily locked/);
+    ).rejects.toThrow(/^Account temporarily locked/);
 
     const dbUser = await UserModel.findOne({ instituteEmail: validRegistration.instituteEmail });
     expect(dbUser?.lockoutUntil).not.toBeNull();
     expect(new Date(dbUser!.lockoutUntil!).getTime()).toBeGreaterThan(Date.now());
+
+    // Once lockout expires, a subsequent failed attempt starts fresh counter and does not immediately re-lock
+    await UserModel.updateOne(
+      { instituteEmail: validRegistration.instituteEmail },
+      { lockoutUntil: new Date(Date.now() - 1000) }
+    );
+    await expect(
+      AuthService.login(
+        { instituteEmail: validRegistration.instituteEmail, password: 'WrongPassword!' },
+        'corr-login-after-lockout-expired'
+      )
+    ).rejects.toThrow(/Invalid email or password/);
+
+    const dbUserAfter = await UserModel.findOne({ instituteEmail: validRegistration.instituteEmail });
+    expect(dbUserAfter?.failedLoginAttempts).toBe(1);
+    expect(dbUserAfter?.lockoutUntil).toBeNull();
   });
 
   it('AUTH-11: blocked account login returns 403 ACCOUNT_BLOCKED', async () => {

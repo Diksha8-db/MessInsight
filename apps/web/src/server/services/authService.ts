@@ -229,7 +229,10 @@ export class AuthService {
 
     const isMatch = await comparePassword(input.password, user.passwordHash);
     if (!isMatch) {
-      const newAttempts = user.failedLoginAttempts + 1;
+      // If previous lockout window has expired, reset attempt counter fresh
+      const isLockoutExpired = user.lockoutUntil && new Date(user.lockoutUntil) <= new Date();
+      const currentAttempts = isLockoutExpired ? 0 : user.failedLoginAttempts;
+      const newAttempts = currentAttempts + 1;
       let lockoutDate: Date | null = null;
 
       if (newAttempts >= 5) {
@@ -250,7 +253,7 @@ export class AuthService {
 
       if (newAttempts >= 5) {
         throw AppError.rateLimited(
-          'Too many failed login attempts. Account temporarily locked for 15 minutes.',
+          'Account temporarily locked due to multiple failed login attempts. Try again in 15 minutes.',
           15 * 60
         );
       }
