@@ -18,7 +18,27 @@ if (!global.mongooseCache) {
 }
 
 export async function connectToDatabase(): Promise<typeof mongoose> {
-  if (cached.conn) {
+  // If Mongoose is already connected (e.g. In test suites using MongoMemoryServer or active sessions),
+  // return the active connection to avoid openUri() conflict errors.
+  if (mongoose.connection.readyState === 1) {
+    cached.conn = mongoose;
+    return mongoose;
+  }
+
+  // If currently connecting, wait for the connection to settle
+  if (mongoose.connection.readyState === 2) {
+    await mongoose.connection.asPromise();
+    cached.conn = mongoose;
+    return mongoose;
+  }
+
+  // If connection was disconnected, reset stale cache
+  if (mongoose.connection.readyState === 0) {
+    cached.conn = null;
+    cached.promise = null;
+  }
+
+  if (cached.conn && cached.conn.connection.readyState === 1) {
     return cached.conn;
   }
 
@@ -59,11 +79,11 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
 export const connectDb = connectToDatabase;
 
 export async function disconnectFromDatabase(): Promise<void> {
-  if (cached.conn) {
-    await cached.conn.disconnect();
-    cached.conn = null;
-    cached.promise = null;
-    logger.info('[Database] Disconnected from MongoDB');
+  if (mongoose.connection.readyState !== 0) {
+    await mongoose.disconnect();
   }
+  cached.conn = null;
+  cached.promise = null;
+  logger.info('[Database] Disconnected from MongoDB');
 }
 

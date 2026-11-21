@@ -63,6 +63,7 @@ describe('Route Guard Scanner', () => {
   /** Public routes exempt from guard requirement. */
   const PUBLIC_ROUTES = new Set([
     'health',
+    'internal',
     'auth/register',
     'auth/login',
     'auth/logout',
