@@ -36,6 +36,7 @@ The recent series of commits resolves critical database connection concurrency i
 | **`2df6453`** | `feat: add internal attendance history API endpoint, route guards, and RBAC tests` | GungunW-0903 | `requireInternalSecret` timing-safe guard, route scanner RBAC enforcement, `SEC-05..07`     |
 | **`582980e`** | `feat: add authentication logout endpoint and manager layout component`            | GungunW-0903 | Added GET logout endpoint with redirect, client-side logout button in Manager layout        |
 | **`3c726ed`** | `Fixed the Timezone Date Generation while publishing menu`                         | GungunW-0903 | Fixed IST timezone date bug (00:00-05:30 IST), existing menu fallback via `apiClient.put` |
+| **`Pending`** | `fix: resolve food item feedback & dish names in manager leaderboard`              | GungunW-0903 | Fallback menu lookup for dish names, menu dish catalog sync, student dish ratings UI        |
 
 ```mermaid
 gitGraph
@@ -45,6 +46,7 @@ gitGraph
    commit id: "2df6453" tag: "Internal Guard & RBAC"
    commit id: "582980e" tag: "Logout GET & Manager Layout"
    commit id: "3c726ed" tag: "Timezone Fix & Menu Fallback"
+   commit id: "DishFix" tag: "Dish Feedback & Leaderboard Fix"
 ```
 
 ---
@@ -429,19 +431,160 @@ if (menuId) {
 
 ---
 
+### Commit 6: `Pending` — Food Item Feedback Reflection & Dish Name Resolution
+- **Files Modified**:
+  - `apps/web/src/server/services/analyticsService.ts`
+  - `apps/web/src/server/services/menuService.ts`
+  - `apps/web/src/components/feedback/FeedbackCard.tsx`
+  - `apps/web/src/app/student/feedback/page.tsx`
+
+#### Errors & Issues Addressed
+1. **Manager Analytics Leaderboard Showing "Unknown Dish (General)"**:
+   - In `AnalyticsService.getDishRatings()`, dish ratings from student feedbacks were joined via MongoDB `$lookup` exclusively against the `dishes` collection (`from: 'dishes'`).
+   - However, dishes created by mess managers when authoring menus are stored dynamically inside the `dishes` array of the `menus` collection (`menu.dishes`). Because these dish IDs did not exist in the standalone `dishes` collection, the `$lookup` produced an empty array (`dishInfo: []`), leaving `dishName` as `null`.
+   - The UI in `AnalyticsPage.tsx` then fell back to:
+     ```tsx
+     <span>{dish.dishName || 'Unknown Dish'}</span>
+     <span>({dish.category || 'General'})</span>
+     ```
+   - Consequently, student ratings for custom menu items appeared in the leaderboard as **`Unknown Dish (General)`** rather than with their actual dish names.
+   - **Fix**: Added a secondary fallback `$lookup` to the `menus` collection in `AnalyticsService.getDishRatings` using MongoDB's `$unwind` and `$expr`. Combined dish names and categories using `$ifNull`, guaranteeing dish names are accurately resolved whether stored in `dishes` or `menus.dishes`. Furthermore, grouped results by `dishName` so ratings across multiple service dates aggregate into a unified score and count.
+2. **Menu Creation Disconnect with Dishes Catalog**:
+   - `MenuService.createMenu` and `updateMenu` previously generated arbitrary ObjectIds (`new mongoose.Types.ObjectId()`) for each dish without maintaining a record in the `dishes` catalog collection.
+   - **Fix**: Implemented `resolveDish(messId, name, category, isAvailable)` in `menuService.ts`. It performs a case-insensitive lookup in `DishModel` for existing dishes belonging to the mess, creates the dish document if missing, and associates the persistent `dishId` across menus.
+3. **Student Feedback Card Missing Individual Dish Ratings**:
+   - On `/student/feedback`, `FeedbackCard` displayed only overall satisfaction stars and freeform comments. Students had no visual confirmation that their individual dish ratings had been recorded.
+   - **Fix**: Updated `FeedbackCard.tsx` to accept `menuDishes` and render a `Dish Ratings` list showing each rated item and its star score. Updated `StudentFeedbackPage` to pass `menu.dishes` to `FeedbackCard`.
+
+#### Code Modifications
+In [analyticsService.ts](file:///c:/Users/Mohnish/OneDrive/Desktop/MessInsight/apps/web/src/server/services/analyticsService.ts#L75-L135):
+```typescript
+{
+  $lookup: {
+    from: 'dishes',
+    localField: 'dishRatings.dishId',
+    foreignField: '_id',
+    as: 'dishInfo',
+  },
+},
+{
+  $lookup: {
+    from: 'menus',
+    let: { targetDishId: '$dishRatings.dishId' },
+    pipeline: [
+      { $unwind: '$dishes' },
+      { $match: { $expr: { $eq: ['$dishes.dishId', '$$targetDishId'] } } },
+      { $limit: 1 },
+    ],
+    as: 'menuDishInfo',
+  },
+},
+{
+  $project: {
+    rating: '$dishRatings.rating',
+    dishId: '$dishRatings.dishId',
+    dishName: {
+      $ifNull: [
+        { $arrayElemAt: ['$dishInfo.name', 0] },
+        { $arrayElemAt: ['$menuDishInfo.dishes.name', 0] },
+        'Unknown Dish',
+      ],
+    },
+    category: {
+      $ifNull: [
+        { $arrayElemAt: ['$dishInfo.category', 0] },
+        { $arrayElemAt: ['$menuDishInfo.dishes.category', 0] },
+        'General',
+      ],
+    },
+  },
+},
+{
+  $group: {
+    _id: '$dishName',
+    dishId: { $first: '$dishId' },
+    category: { $first: '$category' },
+    averageRating: { $avg: '$rating' },
+    ratingCount: { $sum: 1 },
+  },
+},
+```
+
+In [menuService.ts](file:///c:/Users/Mohnish/OneDrive/Desktop/MessInsight/apps/web/src/server/services/menuService.ts#L23-L45):
+```typescript
+async function resolveDish(messId: string, name: string, category: string, isAvailable: boolean): Promise<mongoose.Types.ObjectId> {
+  try {
+    const existing = await DishModel.findOne({
+      messId: new mongoose.Types.ObjectId(messId),
+      name: { $regex: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      isDeleted: false,
+    }).exec();
+
+    if (existing) {
+      return existing._id;
+    }
+
+    const created = await DishModel.create({
+      messId: new mongoose.Types.ObjectId(messId),
+      name,
+      category: (category as DishCategory) || DishCategory.MAIN_COURSE,
+      isAvailable: isAvailable ?? true,
+    });
+    return created._id;
+  } catch {
+    return new mongoose.Types.ObjectId();
+  }
+}
+```
+
+In [FeedbackCard.tsx](file:///c:/Users/Mohnish/OneDrive/Desktop/MessInsight/apps/web/src/components/feedback/FeedbackCard.tsx#L80-L108):
+```tsx
+{feedback.dishRatings && feedback.dishRatings.length > 0 && (
+  <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+    <div className="text-xs uppercase tracking-wider text-gray-400 font-semibold">
+      Dish Ratings
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      {feedback.dishRatings.map((dr, idx) => {
+        const matched =
+          menuDishes?.find((d) => d.dishId === dr.dishId || (d as any)._id === dr.dishId) ||
+          (feedback.menuId as any)?.dishes?.find(
+            (d: any) => d.dishId === dr.dishId || d._id === dr.dishId
+          );
+        const name = matched?.name || `Dish ${idx + 1}`;
+        return (
+          <div
+            key={idx}
+            className="flex items-center justify-between text-xs bg-gray-50 dark:bg-gray-900/40 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-800"
+          >
+            <span className="font-medium text-gray-700 dark:text-gray-300">{name}</span>
+            <span className="font-bold text-amber-500">{dr.rating}★</span>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+```
+
+---
+
 ## 4. Summary of Errors Fixed Across the Commits
 
-| Error / Vulnerability                                          | Root Cause                                                              | File Affected                        | Solution                                                                                   |
-| :------------------------------------------------------------- | :---------------------------------------------------------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------- |
-| **`MongooseError: Can't call openUri() on active connection`** | Multiple calls to `connectToDatabase()` during concurrent test runs     | `src/server/lib/db.ts`               | Added `readyState === 1` and `readyState === 2` checks before initiating connection        |
-| **Dangling connection handles on teardown**                    | Only disconnected if `cached.conn` existed, missing un-cached instances | `src/server/lib/db.ts`               | Checked `mongoose.connection.readyState !== 0` to guarantee complete teardown              |
-| **Unfair immediate re-lockout upon 1st retry**                 | `failedLoginAttempts` was not reset after `lockoutUntil` expired        | `src/server/services/authService.ts` | Checked `isLockoutExpired` and reset counter to `0` prior to incrementing                  |
-| **Timing side-channel vulnerability on service API**           | Inconsistent or missing timing-safe secret comparisons across endpoints | `src/server/middleware/guards.ts`    | Standardized `requireInternalSecret` using `crypto.timingSafeEqual`                        |
-| **False-positive security route scan exemption**               | `'internal'` was hardcoded in `PUBLIC_ROUTES` exempt list               | `src/tests/rbac.test.ts`             | Removed `'internal'` from exempt list and registered internal guards in scanner            |
-| **`405 Method Not Allowed` on GET `/api/auth/logout`**         | Route only implemented `POST`, failing on direct browser navigations    | `src/app/api/auth/logout/route.ts`   | Added `GET` handler with session revocation, cookie deletion, and 302 redirect to `/login` |
-| **Early morning date rollback (00:00 - 05:30 IST)**            | Used UTC-based `new Date().toISOString()` which lags by 5.5 hours       | `src/app/manager/page.tsx`           | Switched to `new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })`        |
-| **Duplicate menu creation failure on re-publish**              | No fallback to update existing menu if draft/menu already exists        | `src/app/manager/page.tsx`           | Added try-catch fallback querying existing menu and updating with `apiClient.put`          |
-| **Missing PUT method in HTTP client**                          | `apiClient` only exposed `post`, `patch`, and `delete`                  | `src/lib/apiClient.ts`               | Added typed `apiClient.put` supporting full JSON payloads and headers                      |
+| Error / Vulnerability                                          | Root Cause                                                              | File Affected                                  | Solution                                                                                   |
+| :------------------------------------------------------------- | :---------------------------------------------------------------------- | :--------------------------------------------- | :----------------------------------------------------------------------------------------- |
+| **`MongooseError: Can't call openUri() on active connection`** | Multiple calls to `connectToDatabase()` during concurrent test runs     | `src/server/lib/db.ts`                         | Added `readyState === 1` and `readyState === 2` checks before initiating connection        |
+| **Dangling connection handles on teardown**                    | Only disconnected if `cached.conn` existed, missing un-cached instances | `src/server/lib/db.ts`                         | Checked `mongoose.connection.readyState !== 0` to guarantee complete teardown              |
+| **Unfair immediate re-lockout upon 1st retry**                 | `failedLoginAttempts` was not reset after `lockoutUntil` expired        | `src/server/services/authService.ts`           | Checked `isLockoutExpired` and reset counter to `0` prior to incrementing                  |
+| **Timing side-channel vulnerability on service API**           | Inconsistent or missing timing-safe secret comparisons across endpoints | `src/server/middleware/guards.ts`              | Standardized `requireInternalSecret` using `crypto.timingSafeEqual`                        |
+| **False-positive security route scan exemption**               | `'internal'` was hardcoded in `PUBLIC_ROUTES` exempt list               | `src/tests/rbac.test.ts`                       | Removed `'internal'` from exempt list and registered internal guards in scanner            |
+| **`405 Method Not Allowed` on GET `/api/auth/logout`**         | Route only implemented `POST`, failing on direct browser navigations    | `src/app/api/auth/logout/route.ts`             | Added `GET` handler with session revocation, cookie deletion, and 302 redirect to `/login` |
+| **Early morning date rollback (00:00 - 05:30 IST)**            | Used UTC-based `new Date().toISOString()` which lags by 5.5 hours       | `src/app/manager/page.tsx`                     | Switched to `new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })`        |
+| **Duplicate menu creation failure on re-publish**              | No fallback to update existing menu if draft/menu already exists        | `src/app/manager/page.tsx`                     | Added try-catch fallback querying existing menu and updating with `apiClient.put`          |
+| **Missing PUT method in HTTP client**                          | `apiClient` only exposed `post`, `patch`, and `delete`                  | `src/lib/apiClient.ts`                         | Added typed `apiClient.put` supporting full JSON payloads and headers                      |
+| **"Unknown Dish (General)" in Manager Leaderboard**            | `$lookup` checked `dishes` collection, missing ad-hoc `menus.dishes`   | `src/server/services/analyticsService.ts`      | Added fallback `$lookup` to `menus` with `$ifNull` and grouped by `dishName`               |
+| **Menu dishes disconnected from dish catalog**                 | Dishes created during menu publishing had ad-hoc IDs and no DB doc      | `src/server/services/menuService.ts`           | Added `resolveDish` to upsert/reuse documents in `DishModel` catalog                       |
+| **Student feedback card omitted dish ratings**                 | `FeedbackCard` only rendered overall satisfaction and comment text      | `src/components/feedback/FeedbackCard.tsx`     | Rendered list of rated dishes and stars with menu dish name resolution                     |
 
 ---
 
