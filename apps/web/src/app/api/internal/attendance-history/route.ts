@@ -1,26 +1,12 @@
 import { NextRequest } from 'next/server';
-import crypto from 'crypto';
 import { withApiHandler } from '@/server/lib/apiHandler';
 import { createSuccessResponse } from '@/server/lib/response';
 import { AttendanceService } from '@/server/services/attendanceService';
-import { AppError, ErrorCode } from '@/server/lib/errors';
-import { env } from '@/server/config/env';
+import { AppError } from '@/server/lib/errors';
+import { requireInternalSecret } from '@/server/middleware/guards';
 
 export const GET = withApiHandler(async (req: NextRequest, { correlationId }) => {
-  const secretHeader = req.headers.get('x-ml-service-secret');
-  if (!secretHeader) {
-    throw AppError.unauthorized('Missing service secret', ErrorCode.UNAUTHORIZED);
-  }
-
-  const expected = Buffer.from(env.ML_SERVICE_SECRET);
-  const provided = Buffer.from(secretHeader);
-
-  if (
-    expected.length !== provided.length ||
-    !crypto.timingSafeEqual(expected, provided)
-  ) {
-    throw AppError.forbidden('Invalid service secret', ErrorCode.FORBIDDEN);
-  }
+  requireInternalSecret(req);
 
   const searchParams = req.nextUrl.searchParams;
   const messId = searchParams.get('messId');
@@ -34,4 +20,3 @@ export const GET = withApiHandler(async (req: NextRequest, { correlationId }) =>
   const history = await AttendanceService.getAttendanceHistory(messId, from, to, correlationId);
   return createSuccessResponse(history, 'Attendance history retrieved');
 });
-

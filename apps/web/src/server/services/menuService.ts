@@ -4,6 +4,7 @@ import { NotificationRepository } from '../repositories/NotificationRepository';
 import { AuditLogRepository } from '../repositories/AuditLogRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { IMenu, MenuStatus, MealType } from '../models/Menu';
+import { DishModel, DishCategory } from '../models/Dish';
 import { AppError, ErrorCode } from '../lib/errors';
 import { logger } from '../lib/logger';
 import {
@@ -17,6 +18,30 @@ import { env } from '../config/env';
 function sanitizeDishName(name: string): string {
   // Strip HTML tags and trim
   return name.replace(/<[^>]*>/g, '').trim();
+}
+
+async function resolveDish(messId: string, name: string, category: string, isAvailable: boolean): Promise<mongoose.Types.ObjectId> {
+  try {
+    const existing = await DishModel.findOne({
+      messId: new mongoose.Types.ObjectId(messId),
+      name: { $regex: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') },
+      isDeleted: false,
+    }).exec();
+
+    if (existing) {
+      return existing._id;
+    }
+
+    const created = await DishModel.create({
+      messId: new mongoose.Types.ObjectId(messId),
+      name,
+      category: (category as DishCategory) || DishCategory.MAIN_COURSE,
+      isAvailable: isAvailable ?? true,
+    });
+    return created._id;
+  } catch {
+    return new mongoose.Types.ObjectId();
+  }
 }
 
 function todayInMessTz(): string {
@@ -62,12 +87,14 @@ export class MenuService {
     const seen = new Set<string>();
     const dishes: { name: string; category: string; isAvailable: boolean; dishId: mongoose.Types.ObjectId }[] = [];
     for (const d of input.dishes) {
-      const key = sanitizeDishName(d.name).toLowerCase();
+      const cleanName = sanitizeDishName(d.name);
+      const key = cleanName.toLowerCase();
       if (seen.has(key)) continue; // skip duplicate
       seen.add(key);
+      const dishId = await resolveDish(messId, cleanName, d.category, d.isAvailable);
       dishes.push({
-        dishId: new mongoose.Types.ObjectId(),
-        name: sanitizeDishName(d.name),
+        dishId,
+        name: cleanName,
         category: d.category,
         isAvailable: d.isAvailable,
       });
@@ -105,12 +132,14 @@ export class MenuService {
       const seen = new Set<string>();
       updateData.dishes = [];
       for (const d of input.dishes) {
-        const key = sanitizeDishName(d.name).toLowerCase();
+        const cleanName = sanitizeDishName(d.name);
+        const key = cleanName.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);
+        const dishId = await resolveDish(messId, cleanName, d.category, d.isAvailable);
         updateData.dishes.push({
-          dishId: new mongoose.Types.ObjectId(),
-          name: sanitizeDishName(d.name),
+          dishId,
+          name: cleanName,
           category: d.category,
           isAvailable: d.isAvailable,
         });

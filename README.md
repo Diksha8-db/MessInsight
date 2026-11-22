@@ -142,7 +142,17 @@ npx vitest run src/tests/env.test.ts src/tests/errors.test.ts src/tests/logger.t
 ### Python ML Test Suite
 ```bash
 cd services/ml-service
+# Ensure virtual environment is activated (.venv)
+# Windows:
+.venv\Scripts\activate
+# Linux/macOS:
+source .venv/bin/activate
+
 pytest tests/ -v
+
+# Or run directly using the virtual environment binary:
+# Windows: .venv\Scripts\pytest tests/ -v
+# Linux/macOS: .venv/bin/pytest tests/ -v
 ```
 
 ---

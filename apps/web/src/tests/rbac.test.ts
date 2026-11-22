@@ -8,7 +8,14 @@ import { AuditLogModel } from '../server/models/AuditLog';
 import { AuthService } from '../server/services/authService';
 import { AdminService } from '../server/services/adminService';
 import { emailService, devEmailSink } from '../server/services/emailService';
-import { requireAuth, requireRole, requireMessScope, requireOwnership, rejectClientIdentity } from '../server/middleware/guards';
+import {
+  requireAuth,
+  requireRole,
+  requireMessScope,
+  requireOwnership,
+  rejectClientIdentity,
+  requireInternalSecret,
+} from '../server/middleware/guards';
 import { rateLimit, clearRateLimitStore } from '../server/lib/rateLimiter';
 import { AppError, ErrorCode } from '../server/lib/errors';
 import { signSessionToken } from '../server/lib/auth';
@@ -38,7 +45,11 @@ beforeEach(async () => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
-async function registerAndVerify(email: string, password = 'SecurePassword123!', name = 'Test User') {
+async function registerAndVerify(
+  email: string,
+  password = 'SecurePassword123!',
+  name = 'Test User'
+) {
   await AuthService.register({ name, instituteEmail: email, password }, 'corr-setup');
   const otp = devEmailSink.getLastOtp(email)!;
   await AuthService.verifyEmail({ instituteEmail: email, otp }, 'corr-setup-v');
@@ -48,7 +59,10 @@ async function registerAndVerify(email: string, password = 'SecurePassword123!',
 function makeMockRequest(token?: string, overrides?: Record<string, unknown>) {
   return {
     cookies: {
-      get: (name: string) => (name === (process.env.COOKIE_NAME || 'messinsight_session') && token ? { value: token } : undefined),
+      get: (name: string) =>
+        name === (process.env.COOKIE_NAME || 'messinsight_session') && token
+          ? { value: token }
+          : undefined,
     },
     ...overrides,
   } as unknown as import('next/server').NextRequest;
@@ -79,6 +93,8 @@ describe('Route Guard Scanner', () => {
     /requireManager\s*\(/,
     /requireStudent\s*\(/,
     /requireRole\s*\(/,
+    /requireInternalSecret\s*\(/,
+    /requireInternalService\s*\(/,
   ];
 
   function collectRouteFiles(dir: string, base = ''): Array<{ rel: string; file: string }> {
@@ -115,7 +131,7 @@ describe('Route Guard Scanner', () => {
     if (unguarded.length > 0) {
       throw new Error(
         `The following API routes have no RBAC guard:\n${unguarded.map((r) => `  - ${r}`).join('\n')}\n` +
-          `Add requireAuth/requireAdmin/requireManager/requireRole to each.`
+          `Add requireAuth/requireAdmin/requireManager/requireRole/requireInternalSecret to each.`
       );
     }
     expect(unguarded).toHaveLength(0);
@@ -157,7 +173,10 @@ describe('Phase 3: RBAC Guards & Admin', () => {
 
   it('RBAC-04: requireRole ADMIN rejects MANAGER with 403 FORBIDDEN', async () => {
     const user = await registerAndVerify('manager.rbac@college.edu');
-    await UserModel.updateOne({ _id: user!._id }, { role: UserRole.MANAGER, assignedMessId: new mongoose.Types.ObjectId() });
+    await UserModel.updateOne(
+      { _id: user!._id },
+      { role: UserRole.MANAGER, assignedMessId: new mongoose.Types.ObjectId() }
+    );
     const updated = await UserModel.findById(user!._id);
     const token = signSessionToken({
       sub: updated!._id.toString(),
@@ -307,7 +326,12 @@ describe('Phase 3: RBAC Guards & Admin', () => {
     const user = await registerAndVerify('topromo.rbac@college.edu');
     const messId = new mongoose.Types.ObjectId().toString();
 
-    await AdminService.assignManager(admin!._id.toString(), user!._id.toString(), messId, 'corr-assign');
+    await AdminService.assignManager(
+      admin!._id.toString(),
+      user!._id.toString(),
+      messId,
+      'corr-assign'
+    );
 
     const updated = await UserModel.findById(user!._id);
     expect(updated?.role).toBe(UserRole.MANAGER);
@@ -325,7 +349,12 @@ describe('Phase 3: RBAC Guards & Admin', () => {
 
     const user = await registerAndVerify('todemote.rbac@college.edu');
     const messId = new mongoose.Types.ObjectId().toString();
-    await AdminService.assignManager(admin!._id.toString(), user!._id.toString(), messId, 'corr-assign2');
+    await AdminService.assignManager(
+      admin!._id.toString(),
+      user!._id.toString(),
+      messId,
+      'corr-assign2'
+    );
 
     await AdminService.removeManager(admin!._id.toString(), user!._id.toString(), 'corr-demote');
 
@@ -355,7 +384,8 @@ describe('Phase 3: RBAC Guards & Admin', () => {
     rateLimit(opts); // 1
     rateLimit(opts); // 2
     rateLimit(opts); // 3
-    expect(() => rateLimit(opts)).toThrow( // 4th → rate limited
+    expect(() => rateLimit(opts)).toThrow(
+      // 4th → rate limited
       expect.objectContaining({ statusCode: 429, code: ErrorCode.RATE_LIMITED })
     );
   });
@@ -396,5 +426,47 @@ describe('Phase 3: RBAC Guards & Admin', () => {
       expect(log.summary).not.toMatch(/password|token|otp|secret/i);
     }
   });
-});
 
+  // ── Internal Service-to-Service Guard ─────────────────────────────────────
+
+  it('SEC-05: requireInternalSecret rejects request with missing secret with 401', () => {
+    const req = {
+      headers: new Headers(),
+    } as unknown as import('next/server').NextRequest;
+
+    expect(() => requireInternalSecret(req)).toThrow(
+      expect.objectContaining({
+        code: ErrorCode.UNAUTHORIZED,
+        statusCode: 401,
+      })
+    );
+  });
+
+  it('SEC-06: requireInternalSecret rejects request with invalid secret with 403', () => {
+    const headers = new Headers();
+    headers.set('x-ml-service-secret', 'wrong-secret-value');
+    const req = {
+      headers,
+    } as unknown as import('next/server').NextRequest;
+
+    expect(() => requireInternalSecret(req)).toThrow(
+      expect.objectContaining({
+        code: ErrorCode.FORBIDDEN,
+        statusCode: 403,
+      })
+    );
+  });
+
+  it('SEC-07: requireInternalSecret accepts request with valid timing-safe secret', () => {
+    const headers = new Headers();
+    headers.set(
+      'x-ml-service-secret',
+      process.env.ML_SERVICE_SECRET || 'ml_secret_key_at_least_16_chars'
+    );
+    const req = {
+      headers,
+    } as unknown as import('next/server').NextRequest;
+
+    expect(() => requireInternalSecret(req)).not.toThrow();
+  });
+});

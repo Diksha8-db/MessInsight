@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { UserRepository } from '../repositories/UserRepository';
 import { UserRole } from '../models/User';
 import { AppError, ErrorCode } from '../lib/errors';
@@ -24,17 +25,17 @@ export async function requireAuth(req: NextRequest): Promise<SessionPayload> {
     throw AppError.forbidden('Your account has been deactivated.', ErrorCode.ACCOUNT_BLOCKED);
   }
   if (user.tokenVersion !== session.tokenVersion) {
-    throw AppError.unauthorized('Session has been invalidated. Please log in again.', ErrorCode.SESSION_EXPIRED);
+    throw AppError.unauthorized(
+      'Session has been invalidated. Please log in again.',
+      ErrorCode.SESSION_EXPIRED
+    );
   }
 
   return session;
 }
 
 /** Require authentication AND one of the specified roles. */
-export async function requireRole(
-  req: NextRequest,
-  ...roles: UserRole[]
-): Promise<SessionPayload> {
+export async function requireRole(req: NextRequest, ...roles: UserRole[]): Promise<SessionPayload> {
   const session = await requireAuth(req);
   if (!roles.includes(session.role)) {
     throw AppError.forbidden(
@@ -67,10 +68,7 @@ export async function requireStudent(req: NextRequest): Promise<SessionPayload> 
 export function requireMessScope(session: SessionPayload, requestedMessId: string): void {
   if (session.role === UserRole.ADMIN) return; // Admins see all
   if (!session.messId || session.messId !== requestedMessId) {
-    throw AppError.forbidden(
-      'You are not authorized to access this mess.',
-      ErrorCode.FORBIDDEN
-    );
+    throw AppError.forbidden('You are not authorized to access this mess.', ErrorCode.FORBIDDEN);
   }
 }
 
@@ -101,3 +99,22 @@ export function rejectClientIdentity(body: Record<string, unknown>): void {
   }
 }
 
+/**
+ * Require internal service authentication via the x-ml-service-secret header.
+ * Uses timing-safe equality to protect against timing attacks.
+ */
+export function requireInternalSecret(req: NextRequest): void {
+  const secretHeader = req.headers.get('x-ml-service-secret');
+  if (!secretHeader) {
+    throw AppError.unauthorized('Missing service secret', ErrorCode.UNAUTHORIZED);
+  }
+
+  const expected = Buffer.from(env.ML_SERVICE_SECRET);
+  const provided = Buffer.from(secretHeader);
+
+  if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
+    throw AppError.forbidden('Invalid service secret', ErrorCode.FORBIDDEN);
+  }
+}
+
+export const requireInternalService = requireInternalSecret;

@@ -7,6 +7,7 @@ import { Clock, ShieldAlert, Edit2, Trash2, CheckCircle2 } from 'lucide-react';
 
 interface FeedbackCardProps {
   feedback: Partial<IFeedbackClient> & { _id: string; createdAt?: string | Date };
+  menuDishes?: Array<{ dishId: string; name: string }>;
   onEdit?: (feedback: any) => void;
   onDelete?: (id: string) => void;
   canEdit?: boolean;
@@ -14,6 +15,7 @@ interface FeedbackCardProps {
 
 export function FeedbackCard({
   feedback,
+  menuDishes,
   onEdit,
   onDelete,
   canEdit = false,
@@ -77,6 +79,33 @@ export function FeedbackCard({
         </div>
         <StarRating value={feedback.overallRating || 0} disabled size={20} />
       </div>
+
+      {feedback.dishRatings && feedback.dishRatings.length > 0 && (
+        <div className="space-y-1.5 pt-2 border-t border-gray-100 dark:border-gray-700">
+          <div className="text-xs uppercase tracking-wider text-gray-400 font-semibold">
+            Dish Ratings
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {feedback.dishRatings.map((dr, idx) => {
+              const matched =
+                menuDishes?.find((d) => d.dishId === dr.dishId || (d as any)._id === dr.dishId) ||
+                (feedback.menuId as any)?.dishes?.find(
+                  (d: any) => d.dishId === dr.dishId || d._id === dr.dishId
+                );
+              const name = matched?.name || `Dish ${idx + 1}`;
+              return (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between text-xs bg-gray-50 dark:bg-gray-900/40 px-3 py-1.5 rounded-lg border border-gray-100 dark:border-gray-800"
+                >
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{name}</span>
+                  <span className="font-bold text-amber-500">{dr.rating}★</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {feedback.comments && (
         <div className="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg border border-gray-100 dark:border-gray-800">

@@ -142,6 +142,7 @@ export default function StudentFeedbackPage() {
                       </div>
                       <FeedbackCard
                         feedback={existingFeedback}
+                        menuDishes={menu.dishes}
                         canEdit={true}
                         onDelete={handleDeleteFeedback}
                       />

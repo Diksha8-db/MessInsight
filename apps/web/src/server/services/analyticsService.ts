@@ -76,27 +76,61 @@ export class AnalyticsService {
       },
       { $unwind: '$dishRatings' },
       {
-        $group: {
-          _id: '$dishRatings.dishId',
-          averageRating: { $avg: '$dishRatings.rating' },
-          ratingCount: { $sum: 1 },
-        },
-      },
-      { $sort: { averageRating: -1 as const } },
-      {
         $lookup: {
           from: 'dishes',
-          localField: '_id',
+          localField: 'dishRatings.dishId',
           foreignField: '_id',
           as: 'dishInfo',
         },
       },
       {
+        $lookup: {
+          from: 'menus',
+          let: { targetDishId: '$dishRatings.dishId' },
+          pipeline: [
+            { $unwind: '$dishes' },
+            { $match: { $expr: { $eq: ['$dishes.dishId', '$$targetDishId'] } } },
+            { $limit: 1 },
+          ],
+          as: 'menuDishInfo',
+        },
+      },
+      {
+        $project: {
+          rating: '$dishRatings.rating',
+          dishId: '$dishRatings.dishId',
+          dishName: {
+            $ifNull: [
+              { $arrayElemAt: ['$dishInfo.name', 0] },
+              { $arrayElemAt: ['$menuDishInfo.dishes.name', 0] },
+              'Unknown Dish',
+            ],
+          },
+          category: {
+            $ifNull: [
+              { $arrayElemAt: ['$dishInfo.category', 0] },
+              { $arrayElemAt: ['$menuDishInfo.dishes.category', 0] },
+              'General',
+            ],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$dishName',
+          dishId: { $first: '$dishId' },
+          category: { $first: '$category' },
+          averageRating: { $avg: '$rating' },
+          ratingCount: { $sum: 1 },
+        },
+      },
+      { $sort: { averageRating: -1 as const, ratingCount: -1 as const } },
+      {
         $project: {
           _id: 0,
-          dishId: '$_id',
-          dishName: { $arrayElemAt: ['$dishInfo.name', 0] },
-          category: { $arrayElemAt: ['$dishInfo.category', 0] },
+          dishId: 1,
+          dishName: '$_id',
+          category: 1,
           averageRating: { $round: ['$averageRating', 2] },
           ratingCount: 1,
         },
